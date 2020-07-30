@@ -17,6 +17,8 @@ env:
 
 install:
   - bash .install_verilator.sh
+  - bash .install_yosys.sh
+
 
 script:
   - set -o pipefail && sbt -Dchisel3Version=$CHISEL3 -Dchisel-iotestersVersion=$CHISEL_TESTERS test
