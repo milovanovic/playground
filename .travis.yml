@@ -17,6 +17,7 @@ env:
 
 install:
   - bash .install_verilator.sh
+  - bash .install_iverilog.sh
   - bash .install_yosys.sh
 
 
