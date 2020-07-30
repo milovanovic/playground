@@ -5,7 +5,7 @@ if [ ! -f $INSTALL_DIR/bin/iverilog ]; then
   git clone https://github.com/steveicarus/iverilog
   cd iverilog
   git pull
-  git checkout v3.926
+  git checkout iverilog-0.9.7
   sh autoconf.sh
   ./configure
   make
