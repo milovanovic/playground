@@ -24,7 +24,10 @@ install:
   #- bash .install_iverilog.sh
   #- bash .install_yosys.sh
   - bash .setup_pdk.sh
+  - bash .setup_openlane.sh
 
 
 script:
   #- set -o pipefail && sbt -Dchisel3Version=$CHISEL3 -Dchisel-iotestersVersion=$CHISEL_TESTERS test
+  docker run -it -v $(pwd):/openLANE_flow -v $PDK_ROOT:$PDK_ROOT -e PDK_ROOT=$PDK_ROOT -u $(id -u $USER):$(id -g $USER) openlane:rc2
+  ./flow.tcl -design spm
