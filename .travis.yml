@@ -19,10 +19,11 @@ before_install:
     sudo apt-get install gperf
 
 install:
-  - bash .install_verilator.sh
-  - bash .install_iverilog.sh
-  - bash .install_yosys.sh
+  #- bash .install_verilator.sh
+  #- bash .install_iverilog.sh
+  #- bash .install_yosys.sh
+  - bash .setup_pdk.sh
 
 
 script:
-  - set -o pipefail && sbt -Dchisel3Version=$CHISEL3 -Dchisel-iotestersVersion=$CHISEL_TESTERS test
+  #- set -o pipefail && sbt -Dchisel3Version=$CHISEL3 -Dchisel-iotestersVersion=$CHISEL_TESTERS test
