@@ -5,7 +5,7 @@ set -ev
 #docker run -it -v $(pwd):/openLANE_flow -v $PDK_ROOT:$PDK_ROOT -e PDK_ROOT=$PDK_ROOT -u $(id -u $USER):$(id -g $USER) openlane:rc2
 #docker run -v $(pwd):/openLANE_flow -v $PDK_ROOT:$PDK_ROOT -e PDK_ROOT=$PDK_ROOT -u $(id -u $USER):$(id -g $USER) openlane:rc2 "flow.tcl -design spm"
 ls $(pwd)/openlane
-ls $INSTALL_DIR
+ls $INSTALL_DIR/sky130A
 ls $PDK_ROOT
 ls $TRAVIS_BUILD_DIR/openlane
 pwd
