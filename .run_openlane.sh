@@ -9,7 +9,7 @@ ls $INSTALL_DIR
 ls $PDK_ROOT
 ls $TRAVIS_BUILD_DIR/openlane
 pwd
-docker run -v $(pwd):/openLANE_flow -v $PDK_ROOT:$PDK_ROOT -e PDK_ROOT=$PDK_ROOT -u $(id -u $USER):$(id -g $USER) openlane:rc2 /bin/sh -c "ls; pwd; $(pwd)/openlane/flow.tcl -design spm"
+docker run -v $(pwd):/openLANE_flow -v $PDK_ROOT:$PDK_ROOT -e PDK_ROOT=$PDK_ROOT -u $(id -u $USER):$(id -g $USER) openlane:rc2 /bin/sh -c "ls; /openLANE_flow/flow.tcl -design spm"
 
 # Run flow for design SPM as test
 #source flow.tcl -design spm
