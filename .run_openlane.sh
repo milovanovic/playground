@@ -13,9 +13,10 @@ ls $PDK_ROOT/sky130A/libs.ref
 ls $PDK_ROOT/sky130A/libs.ref/sky130_fd_sc_hd
 ls $PDK_ROOT/sky130A/libs.ref/sky130_fd_sc_hd/lef
 pwd
-#find -name "*.lef"
-docker run -v $(pwd):/openLANE_flow -v $PDK_ROOT:$PDK_ROOT -e PDK_ROOT=$PDK_ROOT -u $(id -u $USER):$(id -g $USER) openlane:rc2 /bin/sh -c "ls install: ls skywater-pdk; ls openlane; ls /openLANE_flow; openlane/flow.tcl -design spm"
+find -name '*sky13A*sky130_fd_sc_hd*.lef'
+docker run -v $(pwd):/openLANE_flow -v $PDK_ROOT:$PDK_ROOT -e PDK_ROOT=$PDK_ROOT -u $(id -u $USER):$(id -g $USER) openlane:rc2 /bin/sh -c "ls; find -name '*sky13A*sky130_fd_sc_hd*.lef'; openlane/flow.tcl -design spm"
 # ls $INSTALL_DIR/sky130A/libs.ref/sky130_fd_sc_hd/lef;
+# ls install: ls skywater-pdk; ls openlane; ls /openLANE_flow
 # Run flow for design SPM as test
 #source flow.tcl -design spm
 #exit
