@@ -1,7 +1,6 @@
 git:
   submodules: false
 language: scala
-sudo: false
 
 cache:
   directories:
@@ -12,7 +11,6 @@ env:
     TRAVIS_DEBUG_MODE=true
     INSTALL_DIR=$TRAVIS_BUILD_DIR/install
     VERILATOR_ROOT=$INSTALL_DIR
-    #PDK_ROOT=/home/travis/build/milovanovic/playground/install/open_pdks/sky130
     PDK_ROOT=$INSTALL_DIR
     PATH=$PATH:$VERILATOR_ROOT/bin:$TRAVIS_BUILD_DIR/utils/bin
     CHISEL3=3.3-SNAPSHOT
