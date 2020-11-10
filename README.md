@@ -1,5 +1,5 @@
-Playground
-==========
+Simple DSP chain
+=================
 
-[![Build Status](https://travis-ci.org/milovanovic/playground.svg?branch=master)](https://travis-ci.org/milovanovic/playground)
+Testing chain queue -> 8bit/32bit adapter -> fft
 
