@@ -44,7 +44,7 @@ val commonSettings = Seq(
 )
 
 
-lazy val fft = (project in file("sdf-fft"))
+lazy val fft = (project in file("generators/sdf-fft"))
   .settings(commonSettings: _*)
   
 lazy val simpleChain = (project in file("."))
