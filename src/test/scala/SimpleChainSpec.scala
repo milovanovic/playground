@@ -28,8 +28,6 @@ import breeze.linalg._
 import breeze.plot._
 
 import fft._
-
-
 import java.io._
 
 trait SimpleChainPins extends SimpleChain {
@@ -58,6 +56,82 @@ trait SimpleChainPins extends SimpleChain {
   val out = InModuleBody { ioOutNode.makeIO() }
 }
 
+object TesterUtils {
+
+ def asNdigitBinary (source: Int, digits: Int): String = {
+    val lstring = source.toBinaryString
+    //val sign = if (source > 0) "%0" else "%1"
+    if (source >= 0) {
+      val l: java.lang.Long = lstring.toLong
+      String.format ("%0" + digits + "d", l)
+    }
+    else
+      lstring.takeRight(digits)
+  }
+  
+  // assumption is that dataWidth is equal to 16
+  // generates real sinusoid
+  def getTone(numSamples: Int, f1r: Double): Seq[Int] = {
+    (0 until numSamples).map(i => (math.sin(2 * math.Pi * f1r * i)*scala.math.pow(2, 14)).toInt)
+  }
+  
+  def genRandSignal(numSamples: Int): Seq[Int] = {
+    import scala.math.sqrt
+    import scala.util.Random
+    
+    Random.setSeed(11110L)
+    (0 until numSamples).map(x => (Random.nextDouble()*scala.math.pow(2, 14)).toInt)
+  }
+  
+  def plot_data(inputData: Seq[Int]): Unit = {
+    import breeze.linalg._
+    import breeze.plot._
+
+    val f = Figure()
+    val p = f.subplot(0)
+    p.legend_=(true)
+    
+    val data = inputData.map(e => e.toDouble).toSeq
+    val xaxis = (0 until data.length).map(e => e.toDouble).toSeq.toArray
+    
+    p += plot(xaxis, data.toArray, name = "input test signal")
+   
+    p.ylim(data.min, data.max)
+    p.title_=(s"Test signal with ${inputData.length} samples")
+
+    p.xlabel = "Time Bins"
+    p.ylabel = "Amplitude"//"20log10(||Vpeak||)"
+    f.saveas(s"test_run_dir/inputData.pdf")
+  }
+  
+  def plot_fft(fftRes: Seq[Long]): Unit = {
+
+    val f = Figure()
+    val p = f.subplot(0)
+    p.legend_=(true)
+    
+    val data = fftRes.map(e => e.toDouble).toSeq
+    val xaxis = (0 until data.length).map(e => e.toDouble).toSeq.toArray
+    
+    p += plot(xaxis, data.toArray, name = "scala FFT")
+   
+    p.ylim(data.min, data.max)
+    p.title_=(s"FFT with length ${fftRes.length}")
+
+    p.xlabel = "Frequency Bin"
+    p.ylabel = "Amplitude"//"20log10(||Vpeak||)"
+    f.saveas(s"test_run_dir/fft.pdf")
+  }
+  
+  def checkError(expected: Seq[Complex], received: Seq[Complex], tolerance: Int) {
+    expected.zip(received).foreach {
+      case (in, out) =>
+        require(math.abs(in.real - out.real) <= tolerance & math.abs(in.imag - out.imag) <= tolerance, "Tolerance is not satisfied")}
+  }
+  
+// val pass = expect(outValsSeq == expected, "Subsampled values should be spaced correctly!")
+}
+
 class SimpleChainBlockTester
 (
   dut: SimpleChain with SimpleChainPins,
@@ -68,112 +142,79 @@ class SimpleChainBlockTester
   val mod = dut.module
   def memAXI: AXI4Bundle = dut.ioMem.get
   val master = bindMaster(dut.in)
-
-  def asNdigitBinary (source: Int, digits: Int): String = {
-    val lstring = source.toBinaryString
-    //val sign = if (source > 0) "%0" else "%1"
-    if (source >= 0) {
-      val l: java.lang.Long = lstring.toLong
-      String.format ("%0" + digits + "d", l)
-    }
-    else
-      lstring.takeRight(digits)
-  }
-
-  def getSimpleTone(numSamples: Int, f1r: Double): Seq[Int] = {
-    require(f1r != 0, "Digital frequency should not be zero!")
-    import scala.util.Random
-    
-    (0 until numSamples).map(i => (math.sin(2 * math.Pi * f1r * i)*scala.math.pow(2, 32-1)).toInt & 0xFFFF0000)
-  }
-
-  // format input data according to axi bus
-  val inData = getSimpleTone(numSamples = params.fftParams.numPoints, f1r = 0.03567/8)
+  val numPoints = params.fftParams.numPoints
+  
+  // expected peak at bin 16 and at bin 512-16
+  val inData = TesterUtils.getTone(numSamples = params.fftParams.numPoints, 0.03125)//f1r = 0.3567/8)
+  //val inData = TesterUtils.genRandSignal(numSamples = numPoints)
   
   println("Input data is:")
   inData.map(c => println(c.toString))
+  //inData.map(c => println(TesterUtils.asNdigitBinary(c, 16)))
   
   val scalaFFT = fourierTr(DenseVector(inData.toArray)).toScalaVector
-  val scalaPlot = scalaFFT.map(c => c.abs.toLong).toSeq
+  val scalaForPlot = scalaFFT.map(c => c.abs.toLong).toSeq
 
-  def plot_scala(chiselFFT: Seq[Long]): Unit = {
-
-    val f = Figure()
-    val p = f.subplot(0)
-    p.legend_=(true)
-    
-    val data = chiselFFT.map(e => e.toDouble).toSeq
-    val xaxis = (0 until data.length).map(e => e.toDouble).toSeq.toArray
-    
-    p += plot(xaxis, data.toArray, name = "scala FFT")
-   
-    p.ylim(data.min, data.max)
-    p.title_=(s"FFT with length ${chiselFFT.length}")
-
-    p.xlabel = "Frequency Bin"
-    p.ylabel = "Amplitude"//"20log10(||Vpeak||)"
-    //f.saveas(s"test_run_dir/RSPBlock/parallel_in_scala_fft.pdf")
-  }
-  plot_scala(scalaPlot)
-
-  def plot_data (chiselFFT: Seq[Int]): Unit = {
-    import breeze.linalg._
-    import breeze.plot._
-
-    val f = Figure()
-    val p = f.subplot(0)
-    p.legend_=(true)
-    
-    val data = chiselFFT.map(e => e.toDouble).toSeq
-    val xaxis = (0 until data.length).map(e => e.toDouble).toSeq.toArray
-    
-    p += plot(xaxis, data.toArray, name = "parallel in")
-   
-    p.ylim(data.min, data.max)
-    p.title_=(s"FFT with length ${chiselFFT.length}")
-
-    p.xlabel = "Frequency Bin"
-    p.ylabel = "Amplitude"//"20log10(||Vpeak||)"
-    //f.saveas(s"test_run_dir/RSPBlock/parallel_in_fft.pdf")
-  }
-
-  plot_data(inData)
-
+  TesterUtils.plot_data(inData)
+  TesterUtils.plot_fft(scalaForPlot)
+  
+  println("Expected result should be: ")
+  scalaFFT.map(c => println((c/numPoints).toString))
+  
   var dataByte = Seq[Int]()
+  
+  // split 32 bit data to 4 bytes
+  // send real sinusoid
   for (i <- inData) {
+    // imag part
+    dataByte = dataByte :+ 0
+    dataByte = dataByte :+ 0
+    // real part
     dataByte = dataByte :+ ((i)        & 0xFF)
     dataByte = dataByte :+ ((i >>> 8)  & 0xFF)
-    dataByte = dataByte :+ ((i >>> 16) & 0xFF)
-    dataByte = dataByte :+ ((i >>> 24) & 0xFF)
   }
-
-  // write to file
-//   val file = new File("test_run_dir/RSPBlock/data_in.txt")
-//   val bw = new BufferedWriter(new FileWriter(file))
-//   for (line <- inData) {
-//     bw.write(f"0x${line}%08X"+"\n")
-//   }
-//   bw.close()
+  
+  //println("Input data to queue:")
+  //dataByte.map(c => println(c.toString))
+  //dataByte.map(c => println(TesterUtils.asNdigitBinary(c, 16)))
+  
+  poke(dut.out.ready, true.B) // make output always ready to accept data
 
   step(1)
    // add master transactions
   master.addTransactions((0 until dataByte.size).map(i => AXI4StreamTransaction(data = dataByte(i))))
   master.addTransactions((0 until dataByte.size).map(i => AXI4StreamTransaction(data = dataByte(i))))
+  master.addTransactions((0 until dataByte.size).map(i => AXI4StreamTransaction(data = dataByte(i))))
+  master.addTransactions((0 until dataByte.size).map(i => AXI4StreamTransaction(data = dataByte(i))))
 
-//   var outputSeq = Seq[Int]()
-//   var temp: Long = 0
-//   var i = 0
-//   while (outputSeq.length < params.fftParams.numPoints) {
-//     if (peek(dut.out.valid)==1) {
-//       temp = temp + (peek(dut.out.bits.data).toLong << ((i % params.beatBytes)*8))
-//       if ((i % params.beatBytes) == params.beatBytes-1) {
-//         outputSeq = outputSeq :+ temp//.asUInt(32.W)
-//         temp = 0
-//       }
-//       i = i + 1
-//     }
-//     step(1)
-//   }
+  var outRealSeq = Seq[Int]()
+  var outImagSeq = Seq[Int]()
+  var peekedVal: BigInt = 0
+  var tmpReal: Double = 0.0
+  var tmpImag: Double = 0.0
+  
+  // this logic perhaps can be simplified
+  while (outRealSeq.length < numPoints) {
+    if (peek(dut.out.valid) == 1) {
+      peekedVal = peek(dut.out.bits.data)
+      tmpReal = ((peekedVal.toInt/math.pow(2,16)).toShort).toDouble
+      tmpImag = ((peekedVal.toInt - (tmpReal.toInt * math.pow(2,16))).toShort).toDouble
+      outRealSeq = outRealSeq :+ tmpReal.toInt
+      outImagSeq = outImagSeq :+ tmpImag.toInt
+    }
+    step(1)
+  }
+  
+  val complexOut = outRealSeq.zip(outImagSeq).map { case (real, imag) => Complex(real, imag) }
+  
+  // useful for small number of points, for fast check
+  println("Received data should be: ")
+  complexOut.map(c => println(c.toString))
+  
+  val chiselFFTForPlot = complexOut.map(c => c.abs.toLong).toSeq
+  TesterUtils.plot_fft(chiselFFTForPlot)
+  
+  //TesterUtils.checkError(scalaFFT, complexOut, tolerance = 2) // currently not usable
 
   stepToCompletion(silentFail = silentFail)
 }
@@ -184,13 +225,13 @@ class SimpleChainSpec extends FlatSpec with Matchers {
     fftParams = FFTParams.fixed(
       dataWidth = 16,
       twiddleWidth = 16,
-      binPoint = 14, // added here!
-      numPoints = 32,
+      binPoint = 0, // added here!
+      numPoints = 512,
       useBitReverse  = true,
       numAddPipes = 1,
       numMulPipes = 1,
-      expandLogic = Array.fill(log2Up(32))(0),
-      keepMSBorLSB = Array.fill(log2Up(32))(true),
+      expandLogic = Array.fill(log2Up(512))(0),
+      keepMSBorLSB = Array.fill(log2Up(512))(true),
     ),
     fftAddress      = AddressSet(0x60000100, 0xFF),
     fftRAM          = AddressSet(0x60002000, 0xFFF),
