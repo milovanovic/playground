@@ -1,0 +1,3 @@
+[submodule "generators/sdf-fft"]
+	path = generators/sdf-fft
+	url = https://github.com/milovanovic/sdf-fft
