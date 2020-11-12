@@ -1,4 +1,5 @@
-package simpleChain
+  
+package SimpleChainInput
 
 import dspblocks._
 
@@ -23,7 +24,7 @@ import freechips.rocketchip.util.UIntIsOneOf
 import freechips.rocketchip.util._
 
 
-case class SimpleChainParameters (
+case class SimpleChainInputParameters (
   fftParams       : FFTParams[FixedPoint],
   fftAddress      : AddressSet,
   fftRAM          : AddressSet,
@@ -47,7 +48,7 @@ lazy val module = new LazyModuleImp(this) {
 }
 }
 
-class SimpleChain(val params: SimpleChainParameters)(implicit p: Parameters) extends LazyModule {
+class SimpleChainInput(val params: SimpleChainInputParameters)(implicit p: Parameters) extends LazyModule {
   
   val fft = LazyModule(new FFTBlockWithWindowing(csrAddress = params.fftAddress, ramAddress = params.fftRAM, params.fftParams, beatBytes = params.beatBytes))
   val in_adapt = AXI4StreamWidthAdapter.nToOne(params.beatBytes)
@@ -65,9 +66,9 @@ class SimpleChain(val params: SimpleChainParameters)(implicit p: Parameters) ext
   lazy val module = new LazyModuleImp(this)
 }
 
-object SimpleChainApp extends App
+object SimpleChainInputApp extends App
 {
-    val params = SimpleChainParameters (
+    val params = SimpleChainInputParameters (
     fftParams = FFTParams.fixed(
       dataWidth = 16,
       twiddleWidth = 16,
@@ -83,7 +84,7 @@ object SimpleChainApp extends App
     beatBytes      = 4)
 
   implicit val p: Parameters = Parameters.empty
-  val standaloneModule = LazyModule(new SimpleChain(params) {
+  val standaloneModule = LazyModule(new SimpleChainInput(params) {
 
     def standaloneParams = AXI4BundleParameters(addrBits = 32, dataBits = 32, idBits = 1)
     val ioMem = mem.map { m => {
@@ -109,21 +110,5 @@ object SimpleChainApp extends App
     val in = InModuleBody { ioInNode.makeIO() }
     val out = InModuleBody { ioOutNode.makeIO() }
   })
-  chisel3.Driver.execute(Array("--target-dir", "verilog/simpleChain", "--top-name", "simpleChain"), ()=> standaloneModule.module) // generate verilog code
+  chisel3.Driver.execute(Array("--target-dir", "verilog/SimpleChainInput", "--top-name", "SimpleChainInput"), ()=> standaloneModule.module) // generate verilog code
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

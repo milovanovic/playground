@@ -1,4 +1,4 @@
-package simpleChain
+package rspTesting
 
 import chisel3.DontCare
 import freechips.rocketchip.interrupts._
@@ -30,7 +30,7 @@ import breeze.plot._
 import fft._
 import java.io._
 
-trait SimpleChainPins extends SimpleChain {
+trait SimpleChainInputPins extends SimpleChainInput {
   def standaloneParams = AXI4BundleParameters(addrBits = 32, dataBits = 32, idBits = 1)
   val ioMem = mem.map { m => {
     val ioMemNode = BundleBridgeSource(() => AXI4Bundle(standaloneParams))
@@ -132,10 +132,10 @@ object TesterUtils {
 // val pass = expect(outValsSeq == expected, "Subsampled values should be spaced correctly!")
 }
 
-class SimpleChainBlockTester
+class SimpleChainInputBlockTester
 (
-  dut: SimpleChain with SimpleChainPins,
-  params: SimpleChainParameters,
+  dut: SimpleChainInput with SimpleChainInputPins,
+  params: SimpleChainInputParameters,
   silentFail: Boolean = false
 ) extends PeekPokeTester(dut.module) with AXI4StreamModel with AXI4MasterModel {
   
@@ -219,9 +219,9 @@ class SimpleChainBlockTester
   stepToCompletion(silentFail = silentFail)
 }
 
-class SimpleChainSpec extends FlatSpec with Matchers {
+class SimpleChainInputSpec extends FlatSpec with Matchers {
 
-  val params = SimpleChainParameters (
+  val params = SimpleChainInputParameters (
     fftParams = FFTParams.fixed(
       dataWidth = 16,
       twiddleWidth = 16,
@@ -237,14 +237,14 @@ class SimpleChainSpec extends FlatSpec with Matchers {
     fftRAM          = AddressSet(0x60002000, 0xFFF),
     beatBytes      = 4)
 
-  behavior of "SimpleChain"
+  behavior of "SimpleChainInput"
   implicit val p: Parameters = Parameters.empty
 
   it should "work chain queue -> adapter -> fft" in {
 
-  val lazyDut = LazyModule(new SimpleChain(params) with SimpleChainPins)
-    chisel3.iotesters.Driver.execute(Array("-tiwv", "-tbn", "verilator", "-tivsuv", "--target-dir", "test_run_dir/SimpleChain", "--top-name", "SimpleChain"), () => lazyDut.module) {
-      c => new SimpleChainBlockTester(lazyDut, params, true)
+  val lazyDut = LazyModule(new SimpleChainInput(params) with SimpleChainInputPins)
+    chisel3.iotesters.Driver.execute(Array("-tiwv", "-tbn", "verilator", "-tivsuv", "--target-dir", "test_run_dir/SimpleChainInput", "--top-name", "SimpleChainInput"), () => lazyDut.module) {
+      c => new SimpleChainInputBlockTester(lazyDut, params, true)
     } should be (true)
   }
 
