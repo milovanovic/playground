@@ -1,3 +1,6 @@
 [submodule "generators/sdf-fft"]
 	path = generators/sdf-fft
 	url = https://github.com/milovanovic/sdf-fft
+[submodule "generators/logMagMux"]
+	path = generators/logMagMux
+	url = https://github.com/milovanovic/logMagMux
