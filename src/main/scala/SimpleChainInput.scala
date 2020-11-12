@@ -1,5 +1,4 @@
-  
-package SimpleChainInput
+package rspTesting
 
 import dspblocks._
 
