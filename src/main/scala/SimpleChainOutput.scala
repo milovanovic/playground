@@ -38,7 +38,7 @@ class SimpleChainOutput(val params: SimpleChainOutputParameters)(implicit p: Par
   val fft = LazyModule(new FFTBlockWithWindowing(csrAddress = params.fftAddress, ramAddress = params.fftRAM, params.fftParams, beatBytes = params.beatBytes))
   val in_adapt = AXI4StreamWidthAdapter.oneToN(params.beatBytes)
   val in_queue = LazyModule(new AXI4StreamBuffer(BufferParams(1, true, true), beatBytes = 4))
-  val mux = LazyModule(new AXI4LogMagMuxBlock(params.logMagMuxParams, params.logMagMuxAddress, params.beatBytes, true))
+  val mux = LazyModule(new AXI4LogMagMuxBlock(params.logMagMuxParams, params.logMagMuxAddress, params.beatBytes))
   
   val lhs = AXI4StreamIdentityNode()
   val rhs = AXI4StreamIdentityNode()
