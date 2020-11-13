@@ -47,6 +47,9 @@ val commonSettings = Seq(
 lazy val fft = (project in file("generators/sdf-fft"))
   .settings(commonSettings: _*)
   
+lazy val mag = (project in file("generators/logMagMux"))
+  .settings(commonSettings: _*)
+  
 lazy val simpleChain = (project in file("."))
-  .dependsOn(fft)
+  .dependsOn(fft, mag)
   .settings(commonSettings: _*)
