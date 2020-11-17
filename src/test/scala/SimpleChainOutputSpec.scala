@@ -80,7 +80,7 @@ class SimpleChainOutputBlockTester
   // sel = 2 -> jplMagOut
   // sel = 3 -> log2MagOut
   
-  //val inData = RspTesterUtils.genRandSignal(numSamples = numPoints, numPoints*2)// for sqr mag
+  //val inData = RspTesterUtils.genRandSignal(numSamples = numPoints, numPoints)// for sqr mag
   val inData = if (selMux == 1) RspTesterUtils.getTone(numSamples = params.fftParams.numPoints, 0.03125, numPoints) else RspTesterUtils.getTone(numSamples = params.fftParams.numPoints, 0.03125)
   
   println("Input data is:")
@@ -121,6 +121,8 @@ class SimpleChainOutputBlockTester
   memWriteWord(params.logMagMuxAddress.base, selMux)
   
   // add master transactions
+  // master.addTransactions((0 until axi4StreamIn.size).map(i => AXI4StreamTransaction(data = axi4StreamIn(i))))
+  // master.addTransactions((0 until axi4StreamIn.size).map(i => AXI4StreamTransaction(data = axi4StreamIn(i))))
   master.addTransactions((0 until axi4StreamIn.size).map(i => AXI4StreamTransaction(data = axi4StreamIn(i))))
   master.addTransactions((0 until axi4StreamIn.size).map(i => AXI4StreamTransaction(data = axi4StreamIn(i))))
   master.addTransactions((0 until axi4StreamIn.size).map(i => AXI4StreamTransaction(data = axi4StreamIn(i))))
@@ -130,7 +132,7 @@ class SimpleChainOutputBlockTester
   var peekedVal: BigInt = 0
   
   // check only one fft window 
-  while (outSeq.length < numPoints * 4) {
+  while (outSeq.length < numPoints * 4 * 4) {
     if (peek(dut.out.valid) == 1 && peek(dut.out.ready) == 1) {
       peekedVal = peek(dut.out.bits.data)
       outSeq = outSeq :+ peekedVal.toInt
@@ -160,20 +162,24 @@ class SimpleChainOutputBlockTester
     realSeq = realSeq :+ tmpReal.toInt
     imagSeq = imagSeq :+ tmpImag.toInt
   }
-  realSeq.map(c => println(c.toString))
-  imagSeq.map(c => println(c.toString))
   
   if (selMux == 0) {
     val complexOut = realSeq.zip(imagSeq).map { case (real, imag) => Complex(real, imag) }
     val absFFTChisel = complexOut.map(c => c.abs.toLong).toSeq
-    RspTesterUtils.plot_fft(absFFTChisel)
-    RspTesterUtils.checkFFTError(fftScala.map(c => Complex((c.real/numPoints), c.imag/numPoints)), complexOut, tolerance = 4)
+    if (numPoints > 256) {
+      RspTesterUtils.plot_fft(absFFTChisel, "Chisel")
+    }
+    val complexScala = fftScala.map(c => Complex((c.real/numPoints), c.imag/numPoints))
+    RspTesterUtils.checkFFTError(complexScala , complexOut, tolerance = 4)
   }
   else {
     val magScala = fftScala.map(c => Complex(c.real/numPoints, c.imag/numPoints).abs.toInt).toSeq
-    RspTesterUtils.plot_fft(realSeq.map(c => c.toLong))
+    if (numPoints > 256) {
+      RspTesterUtils.plot_fft(realSeq.map(c => c.toLong), "Chisel")
+    }
     if (selMux == 2) {
-      RspTesterUtils.checkMagError(magScala, realSeq, tolerance = 4)
+      //magScala ++ magScala ++ magScala ++ magScala
+      RspTesterUtils.checkMagError(magScala ++ magScala ++ magScala ++ magScala, realSeq, tolerance = 4)
     }
   }
   
@@ -182,17 +188,65 @@ class SimpleChainOutputBlockTester
 }
 
 class SimpleChainOutputSpec extends FlatSpec with Matchers {
+   
+  implicit val p: Parameters = Parameters.empty
+  val selMux = 2 // jpl mag
+  
+  behavior of "Chain:  fft -> logMagMux -> buffer -> adapter"
+  
+  for (i <- Seq(16, 32, 64, 128, 256, 512, 1024)) {
+    for (decType <- Seq(DIFDecimType, DITDecimType)) {
+      it should f"compute radix 2^2 $decType FFT, size $i with no growing logic, connected with logMagMux and adapter 32b/8b" in {
+        val params = SimpleChainOutputParameters (
+          fftParams = FFTParams.fixed(
+            dataWidth = 16,
+            twiddleWidth = 16,
+            numPoints = i,
+            useBitReverse  = true, //true
+            decimType = decType,
+            numAddPipes = 1,
+            numMulPipes = 1,
+            expandLogic = Array.fill(log2Up(i))(0),
+            keepMSBorLSB = Array.fill(log2Up(i))(true),
+          ),
+          fftAddress      = AddressSet(0x60000100, 0xFF),
+          fftRAM          = AddressSet(0x60002000, 0xFFF),
+          logMagMuxParams = MAGParams.fixed(
+            dataWidth       = 16,
+            binPoint        = 0,
+            dataWidthLog    = 16,
+            binPointLog     = 11,
+            log2LookUpWidth = 11,
+            useLast         = true,
+            numAddPipes     = 1,
+            numMulPipes     = 1
+          ),
+          logMagMuxAddress  = AddressSet(0x60000080, 0xF),
+          beatBytes         = 4)
+      
+      val lazyDut = LazyModule(new SimpleChainOutput(params) with SimpleChainOutputPins)
+      
+      chisel3.iotesters.Driver.execute(Array("-tiwv", "-tbn", "verilator", "-tivsuv", "--target-dir", "test_run_dir/SimpleChainOutput", "--top-name", "SimpleChainOutputDIF"), () => lazyDut.module) {
+        c => new SimpleChainOutputBlockTester(lazyDut, params, selMux, true)
+      } should be (true)
+      }
+    }
+  }
 
- val params = SimpleChainOutputParameters (
+/*  
+  it should "work chain fft -> logmagmux -> queue -> adapter 32/8 - DIF fft algorithm" in {
+  
+  val paramsDIT = SimpleChainOutputParameters (
     fftParams = FFTParams.fixed(
       dataWidth = 16,
       twiddleWidth = 16,
-      numPoints = 512,
+      numPoints = 8,
       useBitReverse  = true, //true
+      decimType = DITDecimType,
       numAddPipes = 1,
       numMulPipes = 1,
-      expandLogic = Array.fill(log2Up(512))(0),
-      keepMSBorLSB = Array.fill(log2Up(512))(true),
+      expandLogic = Array.fill(log2Up(8))(0),
+      keepMSBorLSB = Array.fill(log2Up(8))(true),
     ),
     fftAddress      = AddressSet(0x60000100, 0xFF),
     fftRAM          = AddressSet(0x60002000, 0xFFF),
@@ -209,27 +263,14 @@ class SimpleChainOutputSpec extends FlatSpec with Matchers {
     logMagMuxAddress  = AddressSet(0x60000080, 0xF),
     beatBytes         = 4)
   
-  behavior of "SimpleChainOutput"
-  implicit val p: Parameters = Parameters.empty
-  val selMux = 2 // jpl mag
   
-  it should "work chain fft -> logmagmux -> queue -> adapter 32/8" in {
-
-  val lazyDut = LazyModule(new SimpleChainOutput(params) with SimpleChainOutputPins)
-    chisel3.iotesters.Driver.execute(Array("-tiwv", "-tbn", "verilator", "-tivsuv", "--target-dir", "test_run_dir/SimpleChainOutput", "--top-name", "SimpleChainOutput"), () => lazyDut.module) {
-      c => new SimpleChainOutputBlockTester(lazyDut, params, selMux, true)
+  
+  it should "work chain fft -> logmagmux -> queue -> adapter 32/8 - DIT fft algorithm" in {
+  
+  val lazyDutDIT = LazyModule(new SimpleChainOutput(paramsDIT) with SimpleChainOutputPins)
+    chisel3.iotesters.Driver.execute(Array("-tiwv", "-tbn", "verilator", "-tivsuv", "--target-dir", "test_run_dir/SimpleChainOutput", "--top-name", "SimpleChainOutputDIT"), () => lazyDutDIT.module) {
+      c => new SimpleChainOutputBlockTester(lazyDutDIT, paramsDIT, selMux, true)
     } should be (true)
-  }
+  }*/
 }
-
-
-
-
-
-
-
-
-
-
-
 

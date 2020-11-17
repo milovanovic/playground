@@ -96,22 +96,24 @@ object RspTesterUtils {
 
     p.xlabel = "Frequency Bin"
     p.ylabel = "Amplitude"//"20log10(||Vpeak||)"
-    f.saveas(s"test_run_dir/" ++ "fft" ++ "name" ++ ".pdf")
+    f.saveas(s"test_run_dir/" ++ "fft" ++ name ++ ".pdf")
   }
   
   // TODO: Add function for plotting Chisel and Scala fft at the same graph
   
   def checkFFTError(expected: Seq[Complex], received: Seq[Complex], tolerance: Int = 2) {
     expected.zip(received).foreach {
-      case (in, out) =>
+      case (in, out) => 
         require(math.abs(in.real - out.real) <= tolerance & math.abs(in.imag - out.imag) <= tolerance, "Tolerance is not satisfied")
     }
   }
   
   def checkMagError(expected: Seq[Int], received: Seq[Int], tolerance: Int = 2) {
     expected.zip(received).foreach {
-      case (in, out) =>
+      case (in, out) => {
         require(math.abs(in - out) <= tolerance, "Tolerance is not satisfied")
+       // println(math.abs(in - out).toString)
+      }
     }
   }
 }
