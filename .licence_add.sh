@@ -10,17 +10,12 @@ for src_file in $src_files; do
     file_name=$(basename $src_file)
     echo "File ${file_name} already contains licence identifier"
   else
-    if [ $src_file == *.py ]
-    then
-      sed -i '1i ## SPDX-License-Identifier: Apache-2.0 \n' $src_file
-    elif [ $src_file == *.vhd ]
-    then
-      sed -i '1i -- SPDX-License-Identifier: Apache-2.0 \n' $src_file
-    else
-      sed -i '1i // SPDX-License-Identifier: Apache-2.0 \n' $src_file
-    fi
+    case "$src_file" in
+      *.py | *.tcl) sed -i '1i # SPDX-License-Identifier: Apache-2.0 \n' $src_file ;;
+      *.vhd) sed -i '1i -- SPDX-License-Identifier: Apache-2.0 \n' $src_file ;;
+      *.v | *.cpp | *.h | *.scala | *.sbt) sed -i '1i // SPDX-License-Identifier: Apache-2.0 \n' $src_file ;;
+      *.mat) sed -i '1i % SPDX-License-Identifier: Apache-2.0 \n' $src_file ;;
+      *.) : ;;
+    esac
   fi
 done
-
-
-
